@@ -83,7 +83,7 @@ export default function Layout({ user, onSignOut, children }) {
 
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-sm text-zinc-500">
-          © {new Date().getFullYear()} MindCave • Spatial Test Catalog
+          © {new Date().getFullYear()}  • Spatial Test Catalog
         </div>
       </footer>
     </div>
