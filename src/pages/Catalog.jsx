@@ -15,6 +15,10 @@ export default function Catalog() {
   const [q, setQ] = useState("");
   const [abilityFilter, setAbilityFilter] = useState("");
 
+  // NEW: age filters
+  const [ageMinFilter, setAgeMinFilter] = useState("");
+  const [ageMaxFilter, setAgeMaxFilter] = useState("");
+
   useEffect(() => {
     (async () => {
       setErr("");
@@ -96,7 +100,36 @@ export default function Catalog() {
     return arr;
   }, [abilityMap]);
 
+  function labelsForTest(testId) {
+    const ids = testAbilities.get(testId) ?? [];
+    return ids.map((aid) => abilityMap.get(aid)?.label).filter(Boolean);
+  }
+
+  // NEW: helpers for age overlap filtering
+  function overlapsAgeRange(testAgeMin, testAgeMax, filterMin, filterMax) {
+    // Interpret null age bounds as "unknown"
+    // If user sets a filter, we only include tests that *can* match the range:
+    // - if filterMin is set, then testAgeMax must be >= filterMin (unless unknown -> exclude)
+    // - if filterMax is set, then testAgeMin must be <= filterMax (unless unknown -> exclude)
+    if (filterMin != null) {
+      if (testAgeMax == null) return false;
+      if (Number(testAgeMax) < filterMin) return false;
+    }
+    if (filterMax != null) {
+      if (testAgeMin == null) return false;
+      if (Number(testAgeMin) > filterMax) return false;
+    }
+    return true;
+  }
+
   const filtered = useMemo(() => {
+    const fMin = ageMinFilter === "" ? null : Number(ageMinFilter);
+    const fMax = ageMaxFilter === "" ? null : Number(ageMaxFilter);
+
+    // if user accidentally enters min > max, swap
+    const filterMin = fMin != null && fMax != null && fMin > fMax ? fMax : fMin;
+    const filterMax = fMin != null && fMax != null && fMin > fMax ? fMin : fMax;
+
     return tests.filter((t) => {
       const matchesQ =
         !q ||
@@ -106,13 +139,17 @@ export default function Catalog() {
       const abilitiesForTest = testAbilities.get(t.id) ?? [];
       const matchesAbility = !abilityFilter || abilitiesForTest.includes(abilityFilter);
 
-      return matchesQ && matchesAbility;
-    });
-  }, [tests, q, abilityFilter, testAbilities]);
+      const matchesAge = overlapsAgeRange(t.age_min, t.age_max, filterMin, filterMax);
 
-  function labelsForTest(testId) {
-    const ids = testAbilities.get(testId) ?? [];
-    return ids.map((aid) => abilityMap.get(aid)?.label).filter(Boolean);
+      return matchesQ && matchesAbility && matchesAge;
+    });
+  }, [tests, q, abilityFilter, ageMinFilter, ageMaxFilter, testAbilities]);
+
+  function clearFilters() {
+    setQ("");
+    setAbilityFilter("");
+    setAgeMinFilter("");
+    setAgeMaxFilter("");
   }
 
   return (
@@ -120,12 +157,12 @@ export default function Catalog() {
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">Spatial Tests Catalog</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Search spatial ability tests by name, author, and ability category. No materials are hosted.
+          Search spatial ability tests by name, author, ability category, and age range.
         </p>
       </div>
 
       <Card>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4 md:items-end">
           <div className="md:col-span-2">
             <label className="text-sm font-medium text-zinc-700">Search</label>
             <input
@@ -137,7 +174,7 @@ export default function Catalog() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-700">Ability category</label>
+            <label className="text-sm font-medium text-zinc-700">Ability</label>
             <select
               className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               value={abilityFilter}
@@ -151,10 +188,52 @@ export default function Catalog() {
               ))}
             </select>
           </div>
-        </div>
 
-        <div className="mt-3 text-xs text-zinc-500">
-          Showing <span className="font-medium text-zinc-900">{filtered.length}</span> result(s)
+          <div className="md:col-span-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-end">
+              <div className="sm:col-span-1">
+                <label className="text-sm font-medium text-zinc-700">Age min (filter)</label>
+                <input
+                  inputMode="numeric"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
+                  placeholder="e.g., 6"
+                  value={ageMinFilter}
+                  onChange={(e) => setAgeMinFilter(e.target.value.replace(/[^\d]/g, ""))}
+                />
+              </div>
+
+              <div className="sm:col-span-1">
+                <label className="text-sm font-medium text-zinc-700">Age max (filter)</label>
+                <input
+                  inputMode="numeric"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
+                  placeholder="e.g., 12"
+                  value={ageMaxFilter}
+                  onChange={(e) => setAgeMaxFilter(e.target.value.replace(/[^\d]/g, ""))}
+                />
+              </div>
+
+              <div className="sm:col-span-1 flex gap-2">
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-6 w-full rounded-xl border px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+                >
+                  Clear filters
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 text-xs text-zinc-500">
+              Showing <span className="font-medium text-zinc-900">{filtered.length}</span> result(s)
+              {ageMinFilter || ageMaxFilter ? (
+                <span>
+                  {" "}
+                  • Note: tests with unknown age bounds are hidden when you use age filters.
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
       </Card>
 
