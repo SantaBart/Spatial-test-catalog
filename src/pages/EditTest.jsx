@@ -258,10 +258,11 @@ export default function EditTest({ mode }) {
               </select>
             </Field>
 
-            <Field label="Authors">
+            <Field label="Authors *">
               <input
                 value={form.authors}
                 onChange={(e) => update("authors", e.target.value)}
+                required
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               />
             </Field>
@@ -342,10 +343,11 @@ export default function EditTest({ mode }) {
           </div>
 
           <div className="mt-4 grid gap-4">
-            <Field label="Original citation">
+            <Field label="Original citation *">
               <textarea
                 value={form.original_citation}
                 onChange={(e) => update("original_citation", e.target.value)}
+                required
                 rows={3}
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               />
