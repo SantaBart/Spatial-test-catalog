@@ -20,6 +20,9 @@ export default function EditTest({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
   const [user, setUser] = useState(null);
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
@@ -51,8 +54,20 @@ export default function EditTest({ mode }) {
         return;
       }
       setUser(data.user);
+  
+      setProfileLoading(true);
+      const { data: p, error } = await supabase
+        .from("profiles")
+        .select("user_id, orcid, display_name")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+  
+      if (!error) setProfile(p ?? null);
+      setProfileLoading(false);
     })();
   }, [navigate]);
+  
+  const hasOrcid = !!profile?.orcid;
 
   useEffect(() => {
     (async () => {
@@ -234,6 +249,23 @@ export default function EditTest({ mode }) {
           <p className="text-sm text-red-600">{err}</p>
         </Card>
       )}
+        {!profileLoading && !hasOrcid && (
+        <Card>
+            <div className="space-y-2">
+            <div className="text-sm font-semibold text-zinc-900">ORCID required</div>
+            <p className="text-sm text-zinc-600">
+                To create or edit tests, please add your ORCID iD in your Profile.
+            </p>
+            <button
+                type="button"
+                onClick={() => navigate("/profile")}
+                className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+                Go to Profile
+            </button>
+            </div>
+        </Card>
+        )}
 
       <form onSubmit={save} className="space-y-4">
         <Card>
@@ -392,11 +424,12 @@ export default function EditTest({ mode }) {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || profileLoading || !hasOrcid}
             className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
-          >
-            {saving ? "Saving…" : "Save"}
+            >
+            {saving ? "Saving…" : !hasOrcid ? "Add ORCID to Save" : "Save"}
           </button>
+
         </div>
       </form>
     </div>
