@@ -20,17 +20,25 @@ export default function EditTest({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // auth + profile
+  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  const [user, setUser] = useState(null);
+  // ui state
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(mode === "edit");
 
+  // vocabularies
   const [abilities, setAbilities] = useState([]);
-  const [selectedAbilityIds, setSelectedAbilityIds] = useState(new Set());
+  const [platforms, setPlatforms] = useState([]);
 
+  // selections
+  const [selectedAbilityIds, setSelectedAbilityIds] = useState(new Set());
+  const [selectedPlatformIds, setSelectedPlatformIds] = useState(new Set());
+
+  // form
   const [form, setForm] = useState({
     name: "",
     age_min: "",
@@ -46,41 +54,63 @@ export default function EditTest({ mode }) {
     status: "draft",
   });
 
+  const hasOrcid = !!profile?.orcid;
+  const selectedAbilityCount = useMemo(() => selectedAbilityIds.size, [selectedAbilityIds]);
+
+  // ---------- helpers ----------
+  function update(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggleSet(setter, idValue) {
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(idValue)) next.delete(idValue);
+      else next.add(idValue);
+      return next;
+    });
+  }
+
+  // ---------- load user + profile ----------
   useEffect(() => {
     (async () => {
+      setErr("");
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
         navigate("/login");
         return;
       }
       setUser(data.user);
-  
+
       setProfileLoading(true);
       const { data: p, error } = await supabase
         .from("profiles")
         .select("user_id, orcid, display_name")
         .eq("user_id", data.user.id)
         .maybeSingle();
-  
+
       if (!error) setProfile(p ?? null);
       setProfileLoading(false);
     })();
   }, [navigate]);
-  
-  const hasOrcid = !!profile?.orcid;
 
+  // ---------- load vocabularies ----------
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("abilities")
-        .select("id,slug,label,description")
-        .order("label", { ascending: true });
+      const [{ data: a, error: aErr }, { data: p, error: pErr }] = await Promise.all([
+        supabase.from("abilities").select("id,slug,label,description").order("label", { ascending: true }),
+        supabase.from("platforms").select("id,slug,label,description").order("label", { ascending: true }),
+      ]);
 
-      if (error) setErr(error.message);
-      else setAbilities(data ?? []);
+      if (aErr) setErr(aErr.message);
+      else setAbilities(a ?? []);
+
+      if (pErr) setErr((prev) => prev || pErr.message);
+      else setPlatforms(p ?? []);
     })();
   }, []);
 
+  // ---------- load existing test + joins (edit mode) ----------
   useEffect(() => {
     if (mode !== "edit" || !id) return;
 
@@ -88,17 +118,14 @@ export default function EditTest({ mode }) {
       setErr("");
       setLoading(true);
 
-      const { data: row, error: testErr } = await supabase
-        .from("tests")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (testErr) {
-        setErr(testErr.message);
+      const testRes = await supabase.from("tests").select("*").eq("id", id).single();
+      if (testRes.error) {
+        setErr(testRes.error.message);
         setLoading(false);
         return;
       }
+
+      const row = testRes.data;
 
       setForm({
         name: row.name ?? "",
@@ -115,37 +142,31 @@ export default function EditTest({ mode }) {
         status: row.status ?? "draft",
       });
 
-      const { data: joins, error: joinErr } = await supabase
-        .from("test_abilities")
-        .select("ability_id")
-        .eq("test_id", id);
+      const [abilityJoinRes, platformJoinRes] = await Promise.all([
+        supabase.from("test_abilities").select("ability_id").eq("test_id", id),
+        supabase.from("test_platforms").select("platform_id").eq("test_id", id),
+      ]);
 
-      if (joinErr) {
-        setErr(joinErr.message);
+      if (abilityJoinRes.error) {
+        setErr(abilityJoinRes.error.message);
         setLoading(false);
         return;
       }
 
-      setSelectedAbilityIds(new Set((joins ?? []).map((j) => j.ability_id)));
+      if (platformJoinRes.error) {
+        setErr(platformJoinRes.error.message);
+        setLoading(false);
+        return;
+      }
+
+      setSelectedAbilityIds(new Set((abilityJoinRes.data ?? []).map((j) => j.ability_id)));
+      setSelectedPlatformIds(new Set((platformJoinRes.data ?? []).map((j) => j.platform_id)));
+
       setLoading(false);
     })();
   }, [mode, id]);
 
-  function update(key, value) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function toggleAbility(abilityId) {
-    setSelectedAbilityIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(abilityId)) next.delete(abilityId);
-      else next.add(abilityId);
-      return next;
-    });
-  }
-
-  const selectedCount = useMemo(() => selectedAbilityIds.size, [selectedAbilityIds]);
-
+  // ---------- save ----------
   async function save(e) {
     e.preventDefault();
     if (!user) return;
@@ -159,14 +180,14 @@ export default function EditTest({ mode }) {
         name: form.name.trim(),
         age_min: form.age_min === "" ? null : Number(form.age_min),
         age_max: form.age_max === "" ? null : Number(form.age_max),
-        authors: form.authors || null,
+        authors: form.authors?.trim() || null,
         year: form.year === "" ? null : Number(form.year),
-        original_citation: form.original_citation || null,
-        doi: form.doi || null,
-        source_url: form.source_url || null,
-        access_notes: form.access_notes || null,
-        use_cases: form.use_cases || null,
-        notes: form.notes || null,
+        original_citation: form.original_citation?.trim() || null,
+        doi: form.doi?.trim() || null,
+        source_url: form.source_url?.trim() || null,
+        access_notes: form.access_notes?.trim() || null,
+        use_cases: form.use_cases?.trim() || null,
+        notes: form.notes?.trim() || null,
         status: form.status,
       };
 
@@ -179,34 +200,64 @@ export default function EditTest({ mode }) {
 
       const testId = testRes.data.id;
 
-      const existingRes = await supabase
+      // ---- sync abilities ----
+      const existingARes = await supabase
         .from("test_abilities")
         .select("ability_id")
         .eq("test_id", testId);
 
-      if (existingRes.error) throw existingRes.error;
+      if (existingARes.error) throw existingARes.error;
 
-      const existing = new Set((existingRes.data ?? []).map((r) => r.ability_id));
+      const existingA = new Set((existingARes.data ?? []).map((r) => r.ability_id));
 
-      const toInsert = [];
-      for (const aid of selectedAbilityIds) if (!existing.has(aid)) toInsert.push({ test_id: testId, ability_id: aid });
+      const aToInsert = [];
+      for (const aid of selectedAbilityIds) if (!existingA.has(aid)) aToInsert.push({ test_id: testId, ability_id: aid });
 
-      const toDelete = [];
-      for (const aid of existing) if (!selectedAbilityIds.has(aid)) toDelete.push(aid);
+      const aToDelete = [];
+      for (const aid of existingA) if (!selectedAbilityIds.has(aid)) aToDelete.push(aid);
 
-      if (toInsert.length > 0) {
-        const insRes = await supabase.from("test_abilities").insert(toInsert);
-        if (insRes.error) throw insRes.error;
+      if (aToInsert.length) {
+        const ins = await supabase.from("test_abilities").insert(aToInsert);
+        if (ins.error) throw ins.error;
       }
 
-      if (toDelete.length > 0) {
-        const delRes = await supabase
+      if (aToDelete.length) {
+        const del = await supabase
           .from("test_abilities")
           .delete()
           .eq("test_id", testId)
-          .in("ability_id", toDelete);
+          .in("ability_id", aToDelete);
+        if (del.error) throw del.error;
+      }
 
-        if (delRes.error) throw delRes.error;
+      // ---- sync platforms ----
+      const existingPRes = await supabase
+        .from("test_platforms")
+        .select("platform_id")
+        .eq("test_id", testId);
+
+      if (existingPRes.error) throw existingPRes.error;
+
+      const existingP = new Set((existingPRes.data ?? []).map((r) => r.platform_id));
+
+      const pToInsert = [];
+      for (const pid of selectedPlatformIds) if (!existingP.has(pid)) pToInsert.push({ test_id: testId, platform_id: pid });
+
+      const pToDelete = [];
+      for (const pid of existingP) if (!selectedPlatformIds.has(pid)) pToDelete.push(pid);
+
+      if (pToInsert.length) {
+        const ins = await supabase.from("test_platforms").insert(pToInsert);
+        if (ins.error) throw ins.error;
+      }
+
+      if (pToDelete.length) {
+        const del = await supabase
+          .from("test_platforms")
+          .delete()
+          .eq("test_id", testId)
+          .in("platform_id", pToDelete);
+        if (del.error) throw del.error;
       }
 
       navigate("/my");
@@ -249,23 +300,24 @@ export default function EditTest({ mode }) {
           <p className="text-sm text-red-600">{err}</p>
         </Card>
       )}
-        {!profileLoading && !hasOrcid && (
+
+      {!profileLoading && !hasOrcid && (
         <Card>
-            <div className="space-y-2">
+          <div className="space-y-2">
             <div className="text-sm font-semibold text-zinc-900">ORCID required</div>
             <p className="text-sm text-zinc-600">
-                To create or edit tests, please add your ORCID iD in your Profile.
+              To create or edit tests, please add your ORCID iD in your Profile.
             </p>
             <button
-                type="button"
-                onClick={() => navigate("/profile")}
-                className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              type="button"
+              onClick={() => navigate("/profile")}
+              className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
             >
-                Go to Profile
+              Go to Profile
             </button>
-            </div>
+          </div>
         </Card>
-        )}
+      )}
 
       <form onSubmit={save} className="space-y-4">
         <Card>
@@ -332,7 +384,7 @@ export default function EditTest({ mode }) {
               <p className="mt-1 text-sm text-zinc-600">Choose from the controlled vocabulary.</p>
             </div>
             <div className="text-sm text-zinc-600">
-              Selected: <span className="font-medium text-zinc-900">{selectedCount}</span>
+              Selected: <span className="font-medium text-zinc-900">{selectedAbilityCount}</span>
             </div>
           </div>
 
@@ -342,13 +394,43 @@ export default function EditTest({ mode }) {
                 <input
                   type="checkbox"
                   checked={selectedAbilityIds.has(a.id)}
-                  onChange={() => toggleAbility(a.id)}
+                  onChange={() => toggleSet(setSelectedAbilityIds, a.id)}
                   className="mt-1"
                 />
                 <div>
                   <div className="font-medium text-zinc-900">{a.label}</div>
                   {a.description && <div className="mt-1 text-sm text-zinc-600">{a.description}</div>}
                   <div className="mt-1 text-xs text-zinc-500">{a.slug}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-900">Platform</h2>
+              <p className="mt-1 text-sm text-zinc-600">Select how the test is administered.</p>
+            </div>
+            <div className="text-sm text-zinc-600">
+              Selected: <span className="font-medium text-zinc-900">{selectedPlatformIds.size}</span>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {platforms.map((p) => (
+              <label key={p.id} className="flex gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
+                <input
+                  type="checkbox"
+                  checked={selectedPlatformIds.has(p.id)}
+                  onChange={() => toggleSet(setSelectedPlatformIds, p.id)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-zinc-900">{p.label}</div>
+                  {p.description && <div className="mt-1 text-sm text-zinc-600">{p.description}</div>}
+                  <div className="mt-1 text-xs text-zinc-500">{p.slug}</div>
                 </div>
               </label>
             ))}
@@ -426,10 +508,9 @@ export default function EditTest({ mode }) {
             type="submit"
             disabled={saving || profileLoading || !hasOrcid}
             className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
-            >
+          >
             {saving ? "Saving…" : !hasOrcid ? "Add ORCID to Save" : "Save"}
           </button>
-
         </div>
       </form>
     </div>
