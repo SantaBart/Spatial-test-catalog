@@ -242,21 +242,7 @@ export default function Profile() {
           </p>
 
           <div className="mt-4 space-y-3">
-            <label className="flex items-start gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
-              <input
-                type="checkbox"
-                checked={form.contact_via_orcid}
-                onChange={(e) => update("contact_via_orcid", e.target.checked)}
-                className="mt-1"
-              />
-              <div>
-                <div className="font-medium text-zinc-900">Allow contact via ORCID</div>
-                <div className="text-sm text-zinc-600">
-                  Show an ORCID link in “Added by…”. (Recommended)
-                </div>
-              </div>
-            </label>
-
+           
             <label className="flex items-start gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
               <input
                 type="checkbox"
