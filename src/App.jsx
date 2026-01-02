@@ -7,6 +7,9 @@ import Catalog from "./pages/Catalog";
 import Login from "./pages/Login";
 import MyEntries from "./pages/MyEntries";
 import EditTest from "./pages/EditTest";
+import Profile from "./pages/Profile";
+
+
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -33,6 +36,7 @@ export default function App() {
         <Route path="/my" element={<MyEntries />} />
         <Route path="/edit" element={<EditTest mode="new" />} />
         <Route path="/edit/:id" element={<EditTest mode="edit" />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Layout>
   );

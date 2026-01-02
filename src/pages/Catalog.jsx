@@ -15,7 +15,6 @@ export default function Catalog() {
   const [q, setQ] = useState("");
   const [abilityFilter, setAbilityFilter] = useState("");
 
-  // NEW: age filters
   const [ageMinFilter, setAgeMinFilter] = useState("");
   const [ageMaxFilter, setAgeMaxFilter] = useState("");
 
@@ -24,9 +23,13 @@ export default function Catalog() {
       setErr("");
       setLoading(true);
 
+      // NOTE: This "profiles:profiles(...)" only works if Supabase has a relationship.
+      // If it errors, we'll switch to a 2-query approach.
       const testsRes = await supabase
         .from("tests")
-        .select("id,name,authors,year,age_min,age_max,source_url,access_notes")
+        .select(
+          "id,name,authors,year,age_min,age_max,source_url,access_notes,owner_id,profiles:profiles(user_id,display_name,orcid,contact_via_orcid,contact_via_email,contact_email)"
+        )
         .eq("status", "published")
         .order("name", { ascending: true });
 
@@ -105,12 +108,7 @@ export default function Catalog() {
     return ids.map((aid) => abilityMap.get(aid)?.label).filter(Boolean);
   }
 
-  // NEW: helpers for age overlap filtering
   function overlapsAgeRange(testAgeMin, testAgeMax, filterMin, filterMax) {
-    // Interpret null age bounds as "unknown"
-    // If user sets a filter, we only include tests that *can* match the range:
-    // - if filterMin is set, then testAgeMax must be >= filterMin (unless unknown -> exclude)
-    // - if filterMax is set, then testAgeMin must be <= filterMax (unless unknown -> exclude)
     if (filterMin != null) {
       if (testAgeMax == null) return false;
       if (Number(testAgeMax) < filterMin) return false;
@@ -126,7 +124,6 @@ export default function Catalog() {
     const fMin = ageMinFilter === "" ? null : Number(ageMinFilter);
     const fMax = ageMaxFilter === "" ? null : Number(ageMaxFilter);
 
-    // if user accidentally enters min > max, swap
     const filterMin = fMin != null && fMax != null && fMin > fMax ? fMax : fMin;
     const filterMax = fMin != null && fMax != null && fMin > fMax ? fMin : fMax;
 
@@ -259,6 +256,12 @@ export default function Catalog() {
         {filtered.map((t) => {
           const labels = labelsForTest(t.id);
 
+          // ✅ Per-test contributor info
+          const p = t.profiles;
+          const addedBy =
+            p?.display_name || (p?.orcid ? `ORCID ${p.orcid}` : "Contributor");
+          const orcidUrl = p?.orcid ? `https://orcid.org/${p.orcid}` : null;
+
           return (
             <div key={t.id} className="rounded-2xl border bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -267,6 +270,17 @@ export default function Catalog() {
                   <p className="mt-1 text-sm text-zinc-600">
                     {(t.authors ?? "—")}{t.year ? ` (${t.year})` : ""}
                   </p>
+
+                  <div className="mt-2 text-xs text-zinc-500">
+                    Added by{" "}
+                    {orcidUrl ? (
+                      <a className="underline hover:no-underline" href={orcidUrl} target="_blank" rel="noreferrer">
+                        {addedBy}
+                      </a>
+                    ) : (
+                      <span>{addedBy}</span>
+                    )}
+                  </div>
                 </div>
 
                 {t.source_url && (
