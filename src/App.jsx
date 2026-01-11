@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import MyEntries from "./pages/MyEntries";
 import EditTest from "./pages/EditTest";
 import Profile from "./pages/Profile";
+import TestDetail from "./pages/TestDetail";
 
 
 
@@ -37,6 +38,8 @@ export default function App() {
         <Route path="/edit" element={<EditTest mode="new" />} />
         <Route path="/edit/:id" element={<EditTest mode="edit" />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/tests/:id" element={<TestDetail />} />
+
       </Routes>
     </Layout>
   );
