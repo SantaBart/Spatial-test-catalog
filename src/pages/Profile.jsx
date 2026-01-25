@@ -31,6 +31,55 @@ function isValidOrcid(value) {
   return /^(\d{4}-){3}[\dX]{4}$/.test((value || "").trim());
 }
 
+function pickFirst(...vals) {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+// Try hard to extract ORCID iD from the Supabase user object
+function extractOrcidFromUser(user) {
+  const meta = user?.user_metadata ?? {};
+  const identities = user?.identities ?? [];
+
+  // Common OIDC field
+  const sub = meta?.sub;
+  if (typeof sub === "string" && sub.includes("-")) return sub;
+
+  // Sometimes custom mapping
+  if (typeof meta?.orcid === "string" && meta.orcid.includes("-")) return meta.orcid;
+
+  // Try identities payload
+  for (const id of identities) {
+    const im = id?.identity_data ?? {};
+    if (typeof im?.sub === "string" && im.sub.includes("-")) return im.sub;
+    if (typeof im?.orcid === "string" && im.orcid.includes("-")) return im.orcid;
+  }
+
+  // Nothing found
+  return "";
+}
+
+function extractDisplayNameFromUser(user) {
+  const meta = user?.user_metadata ?? {};
+  const identities = user?.identities ?? [];
+
+  // Try common OIDC name fields
+  const fromMeta = pickFirst(meta.name, meta.full_name, meta.preferred_username);
+
+  if (fromMeta) return fromMeta;
+
+  // Try identities
+  for (const id of identities) {
+    const im = id?.identity_data ?? {};
+    const fromId = pickFirst(im.name, im.full_name, im.preferred_username);
+    if (fromId) return fromId;
+  }
+
+  return "";
+}
+
 export default function Profile() {
   const navigate = useNavigate();
 
@@ -49,6 +98,8 @@ export default function Profile() {
     contact_via_email: false,
   });
 
+  const [orcidLocked, setOrcidLocked] = useState(false);
+
   useEffect(() => {
     (async () => {
       setErr("");
@@ -62,7 +113,12 @@ export default function Profile() {
       }
       setUser(data.user);
 
-      // load profile row (should exist if you added trigger; but we handle missing too)
+      // Extract from ORCID login session (best effort)
+      const orcidFromAuthRaw = extractOrcidFromUser(data.user);
+      const orcidFromAuth = orcidFromAuthRaw ? normalizeOrcid(orcidFromAuthRaw) : "";
+      const displayFromAuth = extractDisplayNameFromUser(data.user);
+
+      // load profile row
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("user_id,display_name,affiliation,orcid,contact_email,contact_via_orcid,contact_via_email")
@@ -75,14 +131,21 @@ export default function Profile() {
         return;
       }
 
+      // Prefer DB values if present, otherwise fill from ORCID session
+      const finalOrcid = normalizeOrcid(profile?.orcid ?? orcidFromAuth ?? "");
+      const finalDisplay = profile?.display_name ?? displayFromAuth ?? "";
+
       setForm({
-        display_name: profile?.display_name ?? "",
+        display_name: finalDisplay,
         affiliation: profile?.affiliation ?? "",
-        orcid: profile?.orcid ?? "",
+        orcid: finalOrcid,
         contact_email: profile?.contact_email ?? "",
         contact_via_orcid: profile?.contact_via_orcid ?? true,
         contact_via_email: profile?.contact_via_email ?? false,
       });
+
+      // Lock ORCID if we got it from auth (prevents mismatch)
+      setOrcidLocked(!!orcidFromAuth);
 
       setLoading(false);
     })();
@@ -108,15 +171,24 @@ export default function Profile() {
 
     try {
       const cleanOrcid = (form.orcid || "").trim();
+
       if (cleanOrcid && !isValidOrcid(cleanOrcid)) {
         throw new Error("ORCID must be in the format 0000-0000-0000-0000 (last group can end with X).");
+      }
+
+      // If ORCID is locked, always re-derive from current auth session (prevents tampering)
+      let finalOrcid = cleanOrcid || null;
+      if (orcidLocked) {
+        const { data } = await supabase.auth.getUser();
+        const fromAuth = normalizeOrcid(extractOrcidFromUser(data?.user));
+        finalOrcid = fromAuth && isValidOrcid(fromAuth) ? fromAuth : finalOrcid;
       }
 
       const payload = {
         user_id: user.id,
         display_name: form.display_name.trim() || null,
         affiliation: form.affiliation.trim() || null,
-        orcid: cleanOrcid || null,
+        orcid: finalOrcid,
         contact_email: form.contact_email.trim() || null,
         contact_via_orcid: !!form.contact_via_orcid,
         contact_via_email: !!form.contact_via_email,
@@ -181,6 +253,9 @@ export default function Profile() {
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
                 placeholder="e.g., Santa Bart"
               />
+              <div className="mt-2 text-xs text-zinc-500">
+                Tip: ORCID sometimes doesn’t provide a public name via OpenID; you can set it here.
+              </div>
             </Field>
 
             <Field label="Affiliation" hint="Optional, helps people understand your context.">
@@ -194,13 +269,18 @@ export default function Profile() {
 
             <Field
               label="ORCID iD"
-              hint="Format: 0000-0000-0000-0000 (last character can be X)."
+              hint={
+                orcidLocked
+                  ? "This ORCID iD was verified via ORCID sign-in and is locked."
+                  : "Format: 0000-0000-0000-0000 (last character can be X)."
+              }
             >
               <input
                 value={form.orcid}
                 onChange={(e) => update("orcid", normalizeOrcid(e.target.value))}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
+                className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10 disabled:bg-zinc-50"
                 placeholder="0000-0000-0000-0000"
+                disabled={orcidLocked}
               />
               <div className="mt-2 text-xs text-zinc-500">
                 {form.orcid ? (
@@ -215,7 +295,7 @@ export default function Profile() {
                     <span className="text-red-600">ORCID format looks incorrect.</span>
                   )
                 ) : (
-                  <span>Tip: Add ORCID to make it easier to contact/identify you.</span>
+                  <span>Tip: ORCID is used to identify you as a contributor.</span>
                 )}
               </div>
             </Field>
@@ -242,7 +322,6 @@ export default function Profile() {
           </p>
 
           <div className="mt-4 space-y-3">
-           
             <label className="flex items-start gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
               <input
                 type="checkbox"
