@@ -9,6 +9,8 @@ import MyEntries from "./pages/MyEntries";
 import EditTest from "./pages/EditTest";
 import Profile from "./pages/Profile";
 import TestDetail from "./pages/TestDetail";
+import About from "./pages/About";
+
 
 
 
@@ -33,6 +35,7 @@ export default function App() {
     <Layout user={user} onSignOut={signOut}>
       <Routes>
         <Route path="/" element={<Catalog />} />
+        <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/my" element={<MyEntries />} />
         <Route path="/edit" element={<EditTest mode="new" />} />

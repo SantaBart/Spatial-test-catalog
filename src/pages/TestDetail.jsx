@@ -567,29 +567,71 @@ export default function TestDetail() {
             )}
           </div>
 
-          {test.access_notes ? (
-            <div className="text-sm text-zinc-700 md:col-span-2">
-              <span className="font-medium">Access:</span> {test.access_notes}
-            </div>
-          ) : null}
+          {/* DOI */}
+{test.doi ? (
+  <div className="text-sm text-zinc-700 md:col-span-2">
+    <span className="font-medium">DOI:</span>{" "}
+    <a
+      className="underline hover:no-underline"
+      href={`https://doi.org/${String(test.doi).trim()}`}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {String(test.doi).trim()}
+    </a>
+  </div>
+) : null}
 
-          {test.source_url ? (
-            <div className="text-sm text-zinc-700 md:col-span-2">
-              <span className="font-medium">Source:</span>{" "}
-              <a className="underline hover:no-underline" href={test.source_url} target="_blank" rel="noreferrer">
-                {test.source_url}
-              </a>
-            </div>
-          ) : null}
+{/* Source URL */}
+{test.source_url ? (
+  <div className="text-sm text-zinc-700 md:col-span-2">
+    <span className="font-medium">Source URL:</span>{" "}
+    <a className="underline hover:no-underline" href={test.source_url} target="_blank" rel="noreferrer">
+      {test.source_url}
+    </a>
+  </div>
+) : null}
 
-          {test.original_citation ? (
-            <div className="text-sm text-zinc-700 md:col-span-2">
-              <span className="font-medium">Original citation:</span>
-              <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
-                {test.original_citation}
-              </div>
-            </div>
-          ) : null}
+{/* Original citation */}
+{test.original_citation ? (
+  <div className="text-sm text-zinc-700 md:col-span-2">
+    <span className="font-medium">Original citation:</span>
+    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
+      {test.original_citation}
+    </div>
+  </div>
+) : null}
+
+{/* Access notes */}
+{test.access_notes ? (
+  <div className="text-sm text-zinc-700 md:col-span-2">
+    <span className="font-medium">Access notes:</span>
+    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
+      {test.access_notes}
+    </div>
+  </div>
+) : null}
+
+{/* Example use cases (legacy field, still visible) */}
+{test.use_cases ? (
+  <div className="text-sm text-zinc-700 md:col-span-2">
+    <span className="font-medium">Example use cases:</span>
+    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
+      {test.use_cases}
+    </div>
+  </div>
+) : null}
+
+{/* Notes */}
+{test.notes ? (
+  <div className="text-sm text-zinc-700 md:col-span-2">
+    <span className="font-medium">Notes:</span>
+    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
+      {test.notes}
+    </div>
+  </div>
+) : null}
+
         </div>
       </Card>
 

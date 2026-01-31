@@ -1,16 +1,35 @@
-# React + Vite
+# Spatial Test Catalog (MindCave)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A public, searchable catalog of spatial cognition assessments.
 
-Currently, two official plugins are available:
+- ✅ Anyone can browse without an account
+- ✅ Verified contributors sign in via ORCID (OpenID)
+- ✅ Controlled vocabularies for ability + platform tags
+- ✅ Contributor attribution (“Added by…”) via ORCID, with optional email visibility
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Live site
+- (add your Netlify URL here)
+- Custom domain: catalog.mindcave.lv (if connected)
 
-## React Compiler
+## Features
+- Search by test name / author
+- Filters:
+  - Ability categories (controlled)
+  - Platform types (desktop/tablet/paper/VR/AR…)
+  - Age range overlap filters
+- Test records include:
+  - authors, year, citation, DOI, source URL, access notes
+  - ability + platform tags
+  - “Added by” contributor attribution (ORCID link; email shown only if opted-in)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech stack
+- Frontend: React + Vite + Tailwind CSS
+- Backend: Supabase (Postgres + Row Level Security)
+- Auth: ORCID sign-in via OpenID Connect (Supabase OAuth / Keycloak proxy)
+- Hosting: Netlify
+- Source control: GitHub
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Local development
+1) Install dependencies
+```bash
+npm install

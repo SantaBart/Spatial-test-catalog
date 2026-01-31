@@ -6,6 +6,20 @@ function Card({ children }) {
   return <div className="rounded-2xl border bg-white p-4 shadow-sm">{children}</div>;
 }
 
+async function deleteTest(testId) {
+  if (!confirm("Delete this test? This cannot be undone.")) return;
+
+  const { error } = await supabase.from("tests").delete().eq("id", testId);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  // refresh list
+  setTests((prev) => prev.filter((t) => t.id !== testId));
+}
+
+
 export default function MyEntries() {
   const [tests, setTests] = useState([]);
   const [err, setErr] = useState("");
@@ -47,6 +61,7 @@ export default function MyEntries() {
             Drafts are private. Published entries appear in the public catalog.
           </p>
         </div>
+          
 
         <Link
           to="/edit"
@@ -91,7 +106,12 @@ export default function MyEntries() {
                 </span>
               </div>
             </div>
-
+              <button
+                 onClick={() => deleteTest(t.id)}
+                 className="rounded-xl border px-3 py-2 text-sm font-medium hover:bg-zinc-50"
+                >
+                Delete
+             </button>
             <Link
               to={`/edit/${t.id}`}
               className="shrink-0 rounded-xl border px-3 py-2 text-sm font-medium hover:bg-zinc-50"
