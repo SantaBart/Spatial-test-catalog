@@ -314,8 +314,9 @@ export default function TestDetail() {
     const testRes = await supabase
       .from("tests")
       .select(
-        "id,name,authors,year,age_min,age_max,original_citation,doi,source_url,access_notes,status,owner_id,profiles:profiles(user_id,display_name,orcid,contact_via_email,contact_email)"
-      )
+        "id,name,authors,year,age_min,age_max,original_citation,doi,source_url,access_notes,use_cases,notes,status,owner_id,profiles:profiles(user_id,display_name,orcid,contact_via_email,contact_email)"
+        )
+
       .eq("id", id)
       .single();
 

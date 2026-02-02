@@ -2,14 +2,13 @@
 
 A public, searchable catalog of spatial cognition assessments.
 
-- ✅ Anyone can browse without an account
-- ✅ Verified contributors sign in via ORCID (OpenID)
-- ✅ Controlled vocabularies for ability + platform tags
-- ✅ Contributor attribution (“Added by…”) via ORCID, with optional email visibility
+- Anyone can browse without an account
+- Verified contributors sign in via ORCID (OpenID)
+- Controlled vocabularies for ability + platform tags
+- Contributor attribution (“Added by…”) via ORCID, with optional email visibility
 
 ## Live site
-- (add your Netlify URL here)
-- Custom domain: catalog.mindcave.lv (if connected)
+-  catalog.mindcave.lv 
 
 ## Features
 - Search by test name / author

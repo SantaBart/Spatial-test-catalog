@@ -125,18 +125,33 @@ export default function Catalog() {
     })();
   }, []);
 
-  function overlapsAgeRange(testAgeMin, testAgeMax, filterMin, filterMax) {
-    // If user sets filters, exclude tests with unknown bounds that make matching impossible
-    if (filterMin != null) {
-      if (testAgeMax == null) return false;
-      if (Number(testAgeMax) < filterMin) return false;
-    }
-    if (filterMax != null) {
-      if (testAgeMin == null) return false;
-      if (Number(testAgeMin) > filterMax) return false;
-    }
-    return true;
+function overlapsAgeRange(testAgeMin, testAgeMax, filterMin, filterMax) {
+  const toNumOr = (v, fallback) => {
+    if (v == null || v === "") return fallback;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const tMin = toNumOr(testAgeMin, 0);
+  const tMax = toNumOr(testAgeMax, Infinity);
+
+  // check filterMin only if provided
+  if (filterMin != null) {
+    const fMin = Number(filterMin);
+    if (!Number.isFinite(fMin)) return false;
+    if (fMin < tMin || fMin > tMax) return false;
   }
+
+  // check filterMax only if provided
+  if (filterMax != null) {
+    const fMax = Number(filterMax);
+    if (!Number.isFinite(fMax)) return false;
+    if (fMax < tMin || fMax > tMax) return false;
+  }
+
+  return true;
+}
+
 
   function labelsForTestAbilities(testId) {
     const ids = testAbilities.get(testId) ?? [];
