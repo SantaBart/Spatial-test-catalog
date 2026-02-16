@@ -79,7 +79,7 @@ export default function Contact() {
             href={mailtoHref}
             className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 text-center"
           >
-            Email Santa (opens your email app)
+            Send message (opens your email app)
           </a>
         </div>
 
