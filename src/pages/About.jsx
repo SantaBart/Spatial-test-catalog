@@ -58,6 +58,7 @@ export default function About() {
         <h2 className="text-base font-semibold text-zinc-900">Catalog overview</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
           <li><b>Cataog</b>: view and search the spatial test catalog</li>
+          <li><b>Contact</b>: conact form </li>
           <li><b>My entries</b>: view and edit your entries</li>
           <li><b>Add</b>: add a new entry</li>
           <li><b>profile</b>: view and edit your profile</li>
