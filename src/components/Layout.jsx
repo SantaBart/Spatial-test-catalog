@@ -35,6 +35,7 @@ export default function Layout({ user, onSignOut, children }) {
             <nav className="hidden md:flex items-center gap-2">
               <NavItem to="/">Catalog</NavItem>
               <NavItem to="/About">About</NavItem>
+              <NavItem to="/Contact">Contact</NavItem>
               {user && <NavItem to="/my">My entries</NavItem>}
               {user && <NavItem to="/edit">Add</NavItem>}
               {user && <NavItem to="/profile">Profile</NavItem>}

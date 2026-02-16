@@ -40,6 +40,17 @@ export default function About() {
             <p>
             You can also contribute inspired work and other versions of the spatial tests by selecting an entry and adding your input to the tables below.
           </p>
+          <p>
+            Each catalog entry has one of three statuses:
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
+              <li><b>Draft</b> – Visible only to the author.</li>
+              <li><b>Work in progress</b> – Visible to registered (ORCID-signed-in) users.</li>
+              <li><b>Published </b>– Publicly visible to all visitors.</li>
+            </ul>
+            </p>
+            <p>
+              This allows contributors to develop and refine entries before making them fully public.
+          </p>
         </div>
       </Card>
 
@@ -51,6 +62,10 @@ export default function About() {
           <li><b>Add</b>: add a new entry</li>
           <li><b>profile</b>: view and edit your profile</li>
         </ul>
+      </Card>
+
+       <Card>
+        <h1 className="text-base font-semibold text-zinc-900">In case of any questions or conflicts about your contributions or the contributions of others, please reach out to us using the contact form.</h1>
       </Card>
     </div>
   );

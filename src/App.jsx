@@ -10,6 +10,8 @@ import EditTest from "./pages/EditTest";
 import Profile from "./pages/Profile";
 import TestDetail from "./pages/TestDetail";
 import About from "./pages/About";
+import Contact from "./pages/Contact";
+
 
 
 
@@ -42,7 +44,7 @@ export default function App() {
         <Route path="/edit/:id" element={<EditTest mode="edit" />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/tests/:id" element={<TestDetail />} />
-
+        <Route path="/contact" element={<Contact/>} />
       </Routes>
     </Layout>
   );

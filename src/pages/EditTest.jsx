@@ -16,6 +16,42 @@ function Field({ label, hint, children }) {
   );
 }
 
+function SectionHeader({ title, subtitle, right }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
+        {subtitle ? <p className="mt-1 text-sm text-zinc-600">{subtitle}</p> : null}
+      </div>
+      {right ? <div className="text-sm text-zinc-600">{right}</div> : null}
+    </div>
+  );
+}
+
+async function syncJoinTable({ table, testId, idCol, selectedIds }) {
+  // Fetch existing
+  const existingRes = await supabase.from(table).select(idCol).eq("test_id", testId);
+  if (existingRes.error) throw existingRes.error;
+
+  const existing = new Set((existingRes.data ?? []).map((r) => r[idCol]));
+
+  const toInsert = [];
+  for (const vid of selectedIds) if (!existing.has(vid)) toInsert.push({ test_id: testId, [idCol]: vid });
+
+  const toDelete = [];
+  for (const vid of existing) if (!selectedIds.has(vid)) toDelete.push(vid);
+
+  if (toInsert.length > 0) {
+    const ins = await supabase.from(table).insert(toInsert);
+    if (ins.error) throw ins.error;
+  }
+
+  if (toDelete.length > 0) {
+    const del = await supabase.from(table).delete().eq("test_id", testId).in(idCol, toDelete);
+    if (del.error) throw del.error;
+  }
+}
+
 export default function EditTest({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -33,12 +69,15 @@ export default function EditTest({ mode }) {
   // vocabularies
   const [abilities, setAbilities] = useState([]);
   const [platforms, setPlatforms] = useState([]);
+  const [modalities, setModalities] = useState([]);
+  const [populations, setPopulations] = useState([]);
 
   // selections
   const [selectedAbilityIds, setSelectedAbilityIds] = useState(new Set());
   const [selectedPlatformIds, setSelectedPlatformIds] = useState(new Set());
+  const [selectedModalityIds, setSelectedModalityIds] = useState(new Set());
+  const [selectedPopulationIds, setSelectedPopulationIds] = useState(new Set());
 
-  // form
   const [form, setForm] = useState({
     name: "",
     age_min: "",
@@ -54,27 +93,9 @@ export default function EditTest({ mode }) {
     status: "draft",
   });
 
-  const hasOrcid = !!profile?.orcid;
-  const selectedAbilityCount = useMemo(() => selectedAbilityIds.size, [selectedAbilityIds]);
-
-  // ---------- helpers ----------
-  function update(key, value) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function toggleSet(setter, idValue) {
-    setter((prev) => {
-      const next = new Set(prev);
-      if (next.has(idValue)) next.delete(idValue);
-      else next.add(idValue);
-      return next;
-    });
-  }
-
-  // ---------- load user + profile ----------
+  // auth + profile load
   useEffect(() => {
     (async () => {
-      setErr("");
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
         navigate("/login");
@@ -94,23 +115,33 @@ export default function EditTest({ mode }) {
     })();
   }, [navigate]);
 
-  // ---------- load vocabularies ----------
+  const hasOrcid = !!profile?.orcid;
+
+  // vocab fetch
   useEffect(() => {
     (async () => {
-      const [{ data: a, error: aErr }, { data: p, error: pErr }] = await Promise.all([
+      const [a, p, m, pop] = await Promise.all([
         supabase.from("abilities").select("id,slug,label,description").order("label", { ascending: true }),
         supabase.from("platforms").select("id,slug,label,description").order("label", { ascending: true }),
+        supabase.from("modalities").select("id,label").order("label", { ascending: true }),
+        supabase.from("population_types").select("id,label").order("label", { ascending: true }),
       ]);
 
-      if (aErr) setErr(aErr.message);
-      else setAbilities(a ?? []);
+      if (a.error) setErr(a.error.message);
+      else setAbilities(a.data ?? []);
 
-      if (pErr) setErr((prev) => prev || pErr.message);
-      else setPlatforms(p ?? []);
+      if (p.error) setErr((prev) => prev || p.error.message);
+      else setPlatforms(p.data ?? []);
+
+      if (m.error) setErr((prev) => prev || m.error.message);
+      else setModalities(m.data ?? []);
+
+      if (pop.error) setErr((prev) => prev || pop.error.message);
+      else setPopulations(pop.data ?? []);
     })();
   }, []);
 
-  // ---------- load existing test + joins (edit mode) ----------
+  // load existing test (edit mode)
   useEffect(() => {
     if (mode !== "edit" || !id) return;
 
@@ -118,14 +149,13 @@ export default function EditTest({ mode }) {
       setErr("");
       setLoading(true);
 
-      const testRes = await supabase.from("tests").select("*").eq("id", id).single();
-      if (testRes.error) {
-        setErr(testRes.error.message);
+      const { data: row, error: testErr } = await supabase.from("tests").select("*").eq("id", id).single();
+
+      if (testErr) {
+        setErr(testErr.message);
         setLoading(false);
         return;
       }
-
-      const row = testRes.data;
 
       setForm({
         name: row.name ?? "",
@@ -142,31 +172,37 @@ export default function EditTest({ mode }) {
         status: row.status ?? "draft",
       });
 
-      const [abilityJoinRes, platformJoinRes] = await Promise.all([
+      const [joinA, joinP, joinM, joinPop] = await Promise.all([
         supabase.from("test_abilities").select("ability_id").eq("test_id", id),
         supabase.from("test_platforms").select("platform_id").eq("test_id", id),
+        supabase.from("test_modalities").select("modality_id").eq("test_id", id),
+        supabase.from("test_population_types").select("population_type_id").eq("test_id", id),
       ]);
 
-      if (abilityJoinRes.error) {
-        setErr(abilityJoinRes.error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (platformJoinRes.error) {
-        setErr(platformJoinRes.error.message);
-        setLoading(false);
-        return;
-      }
-
-      setSelectedAbilityIds(new Set((abilityJoinRes.data ?? []).map((j) => j.ability_id)));
-      setSelectedPlatformIds(new Set((platformJoinRes.data ?? []).map((j) => j.platform_id)));
+      if (!joinA.error) setSelectedAbilityIds(new Set((joinA.data ?? []).map((j) => j.ability_id)));
+      if (!joinP.error) setSelectedPlatformIds(new Set((joinP.data ?? []).map((j) => j.platform_id)));
+      if (!joinM.error) setSelectedModalityIds(new Set((joinM.data ?? []).map((j) => j.modality_id)));
+      if (!joinPop.error) setSelectedPopulationIds(new Set((joinPop.data ?? []).map((j) => j.population_type_id)));
 
       setLoading(false);
     })();
   }, [mode, id]);
 
-  // ---------- save ----------
+  function update(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggle(setter, idToToggle) {
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(idToToggle)) next.delete(idToToggle);
+      else next.add(idToToggle);
+      return next;
+    });
+  }
+
+  const selectedCount = useMemo(() => selectedAbilityIds.size, [selectedAbilityIds]);
+
   async function save(e) {
     e.preventDefault();
     if (!user) return;
@@ -180,15 +216,15 @@ export default function EditTest({ mode }) {
         name: form.name.trim(),
         age_min: form.age_min === "" ? null : Number(form.age_min),
         age_max: form.age_max === "" ? null : Number(form.age_max),
-        authors: form.authors?.trim() || null,
+        authors: form.authors || null,
         year: form.year === "" ? null : Number(form.year),
-        original_citation: form.original_citation?.trim() || null,
-        doi: form.doi?.trim() || null,
-        source_url: form.source_url?.trim() || null,
-        access_notes: form.access_notes?.trim() || null,
-        use_cases: form.use_cases?.trim() || null,
-        notes: form.notes?.trim() || null,
-        status: form.status,
+        original_citation: form.original_citation || null,
+        doi: form.doi || null,
+        source_url: form.source_url || null,
+        access_notes: form.access_notes || null,
+        use_cases: form.use_cases || null,
+        notes: form.notes || null,
+        status: form.status, // draft | wip | published
       };
 
       const testRes =
@@ -200,65 +236,16 @@ export default function EditTest({ mode }) {
 
       const testId = testRes.data.id;
 
-      // ---- sync abilities ----
-      const existingARes = await supabase
-        .from("test_abilities")
-        .select("ability_id")
-        .eq("test_id", testId);
-
-      if (existingARes.error) throw existingARes.error;
-
-      const existingA = new Set((existingARes.data ?? []).map((r) => r.ability_id));
-
-      const aToInsert = [];
-      for (const aid of selectedAbilityIds) if (!existingA.has(aid)) aToInsert.push({ test_id: testId, ability_id: aid });
-
-      const aToDelete = [];
-      for (const aid of existingA) if (!selectedAbilityIds.has(aid)) aToDelete.push(aid);
-
-      if (aToInsert.length) {
-        const ins = await supabase.from("test_abilities").insert(aToInsert);
-        if (ins.error) throw ins.error;
-      }
-
-      if (aToDelete.length) {
-        const del = await supabase
-          .from("test_abilities")
-          .delete()
-          .eq("test_id", testId)
-          .in("ability_id", aToDelete);
-        if (del.error) throw del.error;
-      }
-
-      // ---- sync platforms ----
-      const existingPRes = await supabase
-        .from("test_platforms")
-        .select("platform_id")
-        .eq("test_id", testId);
-
-      if (existingPRes.error) throw existingPRes.error;
-
-      const existingP = new Set((existingPRes.data ?? []).map((r) => r.platform_id));
-
-      const pToInsert = [];
-      for (const pid of selectedPlatformIds) if (!existingP.has(pid)) pToInsert.push({ test_id: testId, platform_id: pid });
-
-      const pToDelete = [];
-      for (const pid of existingP) if (!selectedPlatformIds.has(pid)) pToDelete.push(pid);
-
-      if (pToInsert.length) {
-        const ins = await supabase.from("test_platforms").insert(pToInsert);
-        if (ins.error) throw ins.error;
-      }
-
-      if (pToDelete.length) {
-        const del = await supabase
-          .from("test_platforms")
-          .delete()
-          .eq("test_id", testId)
-          .in("platform_id", pToDelete);
-        if (del.error) throw del.error;
-      }
+      // Sync all join tables
+      await syncJoinTable({ table: "test_abilities", testId, idCol: "ability_id", selectedIds: selectedAbilityIds });
+      await syncJoinTable({ table: "test_platforms", testId, idCol: "platform_id", selectedIds: selectedPlatformIds });
+      await syncJoinTable({ table: "test_modalities", testId, idCol: "modality_id", selectedIds: selectedModalityIds });
+      await syncJoinTable({
+        table: "test_population_types",
+        testId,
+        idCol: "population_type_id",
+        selectedIds: selectedPopulationIds,
+      });
 
       navigate("/my");
     } catch (e2) {
@@ -280,34 +267,25 @@ export default function EditTest({ mode }) {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">
-            {mode === "new" ? "Add new test" : "Edit test"}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            Add metadata + access information. Do not upload copyrighted materials.
-          </p>
+          <h1 className="text-2xl font-semibold text-zinc-900">{mode === "new" ? "Add new test" : "Edit test"}</h1>
+          <p className="mt-1 text-sm text-zinc-600">Add metadata + access information. Do not upload copyrighted materials.</p>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="rounded-xl border px-3 py-2 text-sm font-medium hover:bg-zinc-50"
-        >
+        <button onClick={() => navigate(-1)} className="rounded-xl border px-3 py-2 text-sm font-medium hover:bg-zinc-50">
           Back
         </button>
       </div>
 
-      {err && (
+      {err ? (
         <Card>
           <p className="text-sm text-red-600">{err}</p>
         </Card>
-      )}
+      ) : null}
 
-      {!profileLoading && !hasOrcid && (
+      {!profileLoading && !hasOrcid ? (
         <Card>
           <div className="space-y-2">
             <div className="text-sm font-semibold text-zinc-900">ORCID required</div>
-            <p className="text-sm text-zinc-600">
-              To create or edit tests, please add your ORCID iD in your Profile.
-            </p>
+            <p className="text-sm text-zinc-600">To create or edit tests, please sign in with ORCID (and ensure your profile has an ORCID iD).</p>
             <button
               type="button"
               onClick={() => navigate("/profile")}
@@ -317,7 +295,7 @@ export default function EditTest({ mode }) {
             </button>
           </div>
         </Card>
-      )}
+      ) : null}
 
       <form onSubmit={save} className="space-y-4">
         <Card>
@@ -338,6 +316,7 @@ export default function EditTest({ mode }) {
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               >
                 <option value="draft">draft</option>
+                <option value="wip">work in progress</option>
                 <option value="published">published</option>
               </select>
             </Field>
@@ -354,7 +333,7 @@ export default function EditTest({ mode }) {
             <Field label="Year">
               <input
                 value={form.year}
-                onChange={(e) => update("year", e.target.value)}
+                onChange={(e) => update("year", e.target.value.replace(/[^\d]/g, ""))}
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               />
             </Field>
@@ -362,7 +341,7 @@ export default function EditTest({ mode }) {
             <Field label="Age min">
               <input
                 value={form.age_min}
-                onChange={(e) => update("age_min", e.target.value)}
+                onChange={(e) => update("age_min", e.target.value.replace(/[^\d]/g, ""))}
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               />
             </Field>
@@ -370,7 +349,7 @@ export default function EditTest({ mode }) {
             <Field label="Age max">
               <input
                 value={form.age_max}
-                onChange={(e) => update("age_max", e.target.value)}
+                onChange={(e) => update("age_max", e.target.value.replace(/[^\d]/g, ""))}
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               />
             </Field>
@@ -378,28 +357,27 @@ export default function EditTest({ mode }) {
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-zinc-900">Ability categories</h2>
-              <p className="mt-1 text-sm text-zinc-600">Choose from the controlled vocabulary.</p>
-            </div>
-            <div className="text-sm text-zinc-600">
-              Selected: <span className="font-medium text-zinc-900">{selectedAbilityCount}</span>
-            </div>
-          </div>
-
+          <SectionHeader
+            title="Ability categories"
+            subtitle="Choose from the controlled vocabulary."
+            right={
+              <>
+                Selected: <span className="font-medium text-zinc-900">{selectedCount}</span>
+              </>
+            }
+          />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {abilities.map((a) => (
               <label key={a.id} className="flex gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
                 <input
                   type="checkbox"
                   checked={selectedAbilityIds.has(a.id)}
-                  onChange={() => toggleSet(setSelectedAbilityIds, a.id)}
+                  onChange={() => toggle(setSelectedAbilityIds, a.id)}
                   className="mt-1"
                 />
                 <div>
                   <div className="font-medium text-zinc-900">{a.label}</div>
-                  {a.description && <div className="mt-1 text-sm text-zinc-600">{a.description}</div>}
+                  {a.description ? <div className="mt-1 text-sm text-zinc-600">{a.description}</div> : null}
                   <div className="mt-1 text-xs text-zinc-500">{a.slug}</div>
                 </div>
               </label>
@@ -408,32 +386,84 @@ export default function EditTest({ mode }) {
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-zinc-900">Platform</h2>
-              <p className="mt-1 text-sm text-zinc-600">Select how the test is administered.</p>
-            </div>
-            <div className="text-sm text-zinc-600">
-              Selected: <span className="font-medium text-zinc-900">{selectedPlatformIds.size}</span>
-            </div>
-          </div>
-
+          <SectionHeader
+            title="Platform"
+            subtitle="Select how the test is administered."
+            right={
+              <>
+                Selected: <span className="font-medium text-zinc-900">{selectedPlatformIds.size}</span>
+              </>
+            }
+          />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {platforms.map((p) => (
               <label key={p.id} className="flex gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
                 <input
                   type="checkbox"
                   checked={selectedPlatformIds.has(p.id)}
-                  onChange={() => toggleSet(setSelectedPlatformIds, p.id)}
+                  onChange={() => toggle(setSelectedPlatformIds, p.id)}
                   className="mt-1"
                 />
                 <div>
                   <div className="font-medium text-zinc-900">{p.label}</div>
-                  {p.description && <div className="mt-1 text-sm text-zinc-600">{p.description}</div>}
+                  {p.description ? <div className="mt-1 text-sm text-zinc-600">{p.description}</div> : null}
                   <div className="mt-1 text-xs text-zinc-500">{p.slug}</div>
                 </div>
               </label>
             ))}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader
+            title="Sensory modality"
+            subtitle="Select the sensory modality/modalities used by the task."
+            right={
+              <>
+                Selected: <span className="font-medium text-zinc-900">{selectedModalityIds.size}</span>
+              </>
+            }
+          />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {modalities.map((m) => (
+              <label key={m.id} className="flex gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
+                <input
+                  type="checkbox"
+                  checked={selectedModalityIds.has(m.id)}
+                  onChange={() => toggle(setSelectedModalityIds, m.id)}
+                  className="mt-1"
+                />
+                <div className="font-medium text-zinc-900">{m.label}</div>
+              </label>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader
+            title="Population type"
+            subtitle="Select populations the test has been adapted for / validated in."
+            right={
+              <>
+                Selected: <span className="font-medium text-zinc-900">{selectedPopulationIds.size}</span>
+              </>
+            }
+          />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {populations.map((p) => (
+              <label key={p.id} className="flex gap-3 rounded-2xl border p-3 hover:bg-zinc-50">
+                <input
+                  type="checkbox"
+                  checked={selectedPopulationIds.has(p.id)}
+                  onChange={() => toggle(setSelectedPopulationIds, p.id)}
+                  className="mt-1"
+                />
+                <div className="font-medium text-zinc-900">{p.label}</div>
+              </label>
+            ))}
+          </div>
+          <div className="mt-3 text-xs text-zinc-500">
+            Tip: if you select anything other than “General population”, the entry will be labeled as “Adapted”.
           </div>
         </Card>
 
@@ -468,14 +498,15 @@ export default function EditTest({ mode }) {
             </Field>
 
             <Field label="Access notes" hint="e.g., contact author, commercial, appendix, open materials.">
-              <input
+              <textarea
                 value={form.access_notes}
                 onChange={(e) => update("access_notes", e.target.value)}
+                rows={2}
                 className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
               />
             </Field>
 
-            <Field label="Example use cases">
+            <Field label="Example use cases (optional)" hint="This can be legacy text; you also have community tables on the detail page.">
               <textarea
                 value={form.use_cases}
                 onChange={(e) => update("use_cases", e.target.value)}

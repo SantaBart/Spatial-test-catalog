@@ -14,7 +14,6 @@ function SmallButton({ children, ...props }) {
     >
       {children}
     </button>
-    
   );
 }
 
@@ -29,6 +28,23 @@ function PrimaryButton({ children, ...props }) {
   );
 }
 
+function Chip({ children }) {
+  return <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">{children}</span>;
+}
+
+function StatusBadge({ status }) {
+  const label =
+    status === "draft"
+      ? "Draft"
+      : status === "wip"
+      ? "Work in progress"
+      : status === "published"
+      ? "Published"
+      : status;
+
+  return <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">{label}</span>;
+}
+
 function isValidUrl(u) {
   if (!u) return true;
   try {
@@ -39,36 +55,29 @@ function isValidUrl(u) {
   }
 }
 
+function Block({ label, value, placeholder = "—" }) {
+  return (
+    <div className="text-sm text-zinc-700 md:col-span-2">
+      <span className="font-medium">{label}:</span>
+      <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
+        {value?.trim?.() ? value.trim() : placeholder}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Generic table editor for rows with:
  * about, authors, publication_url, notes
- * created_by restrictions enforced by RLS (and we also hide buttons in UI)
  */
-function ContributionTable({
-  title,
-  subtitle,
-  rows,
-  loading,
-  error,
-  userId,
-  onAdd,
-  onUpdate,
-  onDelete,
-}) {
+function ContributionTable({ title, subtitle, rows, loading, error, userId, onAdd, onUpdate, onDelete }) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  const [draft, setDraft] = useState({
-    about: "",
-    authors: "",
-    publication_url: "",
-    notes: "",
-  });
+  const [draft, setDraft] = useState({ about: "", authors: "", publication_url: "", notes: "" });
 
   useEffect(() => {
-    if (!adding && !editingId) {
-      setDraft({ about: "", authors: "", publication_url: "", notes: "" });
-    }
+    if (!adding && !editingId) setDraft({ about: "", authors: "", publication_url: "", notes: "" });
   }, [adding, editingId]);
 
   function startAdd() {
@@ -156,7 +165,6 @@ function ContributionTable({
                 value={draft.about}
                 onChange={(e) => setDraft((p) => ({ ...p, about: e.target.value }))}
                 className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
-                placeholder="Short description of the version / related work..."
               />
             </label>
 
@@ -166,7 +174,6 @@ function ContributionTable({
                 value={draft.authors}
                 onChange={(e) => setDraft((p) => ({ ...p, authors: e.target.value }))}
                 className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
-                placeholder="e.g., Peters et al."
               />
             </label>
 
@@ -176,7 +183,6 @@ function ContributionTable({
                 value={draft.publication_url}
                 onChange={(e) => setDraft((p) => ({ ...p, publication_url: e.target.value }))}
                 className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
-                placeholder="https://doi.org/..."
               />
               {draft.publication_url && !isValidUrl(draft.publication_url) ? (
                 <div className="mt-1 text-xs text-red-600">Please enter a valid URL.</div>
@@ -190,7 +196,6 @@ function ContributionTable({
                 value={draft.notes}
                 onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
                 className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
-                placeholder="Any extra context, access notes, differences..."
               />
             </label>
           </div>
@@ -241,10 +246,10 @@ function ContributionTable({
                     <td className="border-b py-3 pr-3">
                       {r.publication_url ? (
                         <a
+                          className="underline hover:no-underline"
                           href={r.publication_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="underline hover:no-underline"
                         >
                           link
                         </a>
@@ -287,6 +292,8 @@ export default function TestDetail() {
   const [test, setTest] = useState(null);
   const [abilities, setAbilities] = useState([]);
   const [platforms, setPlatforms] = useState([]);
+  const [modalities, setModalities] = useState([]);
+  const [populations, setPopulations] = useState([]);
 
   const [versions, setVersions] = useState([]);
   const [related, setRelated] = useState([]);
@@ -306,17 +313,19 @@ export default function TestDetail() {
     })();
   }, []);
 
-  async function loadAll() {
+  async function loadCore() {
     setErr("");
     setLoading(true);
 
-    // Core test
+    // IMPORTANT CHANGE:
+    // Join profiles_public instead of profiles so contact_email is only returned when:
+    // - viewer is logged in (auth.uid exists)
+    // - contributor enabled contact_via_email = true
     const testRes = await supabase
       .from("tests")
       .select(
-        "id,name,authors,year,age_min,age_max,original_citation,doi,source_url,access_notes,use_cases,notes,status,owner_id,profiles:profiles(user_id,display_name,orcid,contact_via_email,contact_email)"
-        )
-
+        "id,name,authors,year,age_min,age_max,original_citation,doi,source_url,access_notes,use_cases,notes,status,owner_id,profiles:profiles_public(user_id,display_name,orcid,contact_email)"
+      )
       .eq("id", id)
       .single();
 
@@ -325,27 +334,30 @@ export default function TestDetail() {
       setLoading(false);
       return;
     }
+
     setTest(testRes.data);
 
-    // abilities + platforms labels for this test (join tables + vocab)
-    const [joinARes, joinPRes, abilRes, platRes] = await Promise.all([
+    const [joinA, joinP, joinM, joinPop, abilRes, platRes, modRes, popRes] = await Promise.all([
       supabase.from("test_abilities").select("ability_id").eq("test_id", id),
       supabase.from("test_platforms").select("platform_id").eq("test_id", id),
-      supabase.from("abilities").select("id,label").order("label", { ascending: true }),
-      supabase.from("platforms").select("id,label").order("label", { ascending: true }),
+      supabase.from("test_modalities").select("modality_id").eq("test_id", id),
+      supabase.from("test_population_types").select("population_type_id").eq("test_id", id),
+
+      supabase.from("abilities").select("id,label"),
+      supabase.from("platforms").select("id,label"),
+      supabase.from("modalities").select("id,label"),
+      supabase.from("population_types").select("id,label"),
     ]);
 
-    if (!abilRes.error) {
-      const map = new Map((abilRes.data ?? []).map((a) => [a.id, a.label]));
-      const ids = (joinARes.data ?? []).map((j) => j.ability_id);
-      setAbilities(ids.map((aid) => map.get(aid)).filter(Boolean));
-    }
+    const aMap = new Map((abilRes.data ?? []).map((x) => [x.id, x.label]));
+    const pMap = new Map((platRes.data ?? []).map((x) => [x.id, x.label]));
+    const mMap = new Map((modRes.data ?? []).map((x) => [x.id, x.label]));
+    const popMap = new Map((popRes.data ?? []).map((x) => [x.id, x.label]));
 
-    if (!platRes.error) {
-      const map = new Map((platRes.data ?? []).map((p) => [p.id, p.label]));
-      const ids = (joinPRes.data ?? []).map((j) => j.platform_id);
-      setPlatforms(ids.map((pid) => map.get(pid)).filter(Boolean));
-    }
+    setAbilities((joinA.data ?? []).map((j) => aMap.get(j.ability_id)).filter(Boolean));
+    setPlatforms((joinP.data ?? []).map((j) => pMap.get(j.platform_id)).filter(Boolean));
+    setModalities((joinM.data ?? []).map((j) => mMap.get(j.modality_id)).filter(Boolean));
+    setPopulations((joinPop.data ?? []).map((j) => popMap.get(j.population_type_id)).filter(Boolean));
 
     setLoading(false);
   }
@@ -353,6 +365,7 @@ export default function TestDetail() {
   async function loadVersions() {
     setVersionsErr("");
     setVersionsLoading(true);
+
     const res = await supabase
       .from("test_versions")
       .select("id,test_id,created_by,about,authors,publication_url,notes,created_at,updated_at")
@@ -367,6 +380,7 @@ export default function TestDetail() {
   async function loadRelated() {
     setRelatedErr("");
     setRelatedLoading(true);
+
     const res = await supabase
       .from("test_related_works")
       .select("id,test_id,created_by,about,authors,publication_url,notes,created_at,updated_at")
@@ -380,41 +394,43 @@ export default function TestDetail() {
 
   useEffect(() => {
     (async () => {
-      await Promise.all([loadAll(), loadVersions(), loadRelated()]);
+      await Promise.all([loadCore(), loadVersions(), loadRelated()]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const contributor = useMemo(() => {
     const p = test?.profiles;
+
     const orcid = p?.orcid ? String(p.orcid).trim() : "";
     const orcidUrl = orcid ? `https://orcid.org/${orcid}` : null;
 
-    const showEmail = !!p?.contact_via_email && !!p?.contact_email;
-    const email = showEmail ? String(p.contact_email).trim() : "";
+    // IMPORTANT CHANGE:
+    // In profiles_public, contact_email is already null unless allowed and viewer is logged in.
+    // We also require userId in the UI, so logged-out users never see email.
+    const email = p?.contact_email ? String(p.contact_email).trim() : "";
+    const showEmail = !!userId && !!email;
 
     const name = p?.display_name?.trim()
       ? p.display_name.trim()
       : orcid
-        ? `ORCID ${orcid}`
-        : "Contributor";
+      ? `ORCID ${orcid}`
+      : "Contributor";
 
     return { name, orcid, orcidUrl, showEmail, email };
-  }, [test]);
+  }, [test, userId]);
 
-  // CRUD handlers
+  const adapted = useMemo(() => {
+    return (populations ?? []).some((p) => String(p).toLowerCase() !== "general population");
+  }, [populations]);
+
+  // contribution CRUD
   async function addVersion(payload) {
     setVersionsErr("");
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) {
-      setVersionsErr("Please sign in to contribute.");
-      return;
-    }
-    const res = await supabase.from("test_versions").insert({
-      test_id: id,
-      created_by: u.user.id,
-      ...payload,
-    });
+    if (!u.user) return setVersionsErr("Please sign in to contribute.");
+
+    const res = await supabase.from("test_versions").insert({ test_id: id, created_by: u.user.id, ...payload });
     if (res.error) setVersionsErr(res.error.message);
     await loadVersions();
   }
@@ -437,15 +453,9 @@ export default function TestDetail() {
   async function addRelated(payload) {
     setRelatedErr("");
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) {
-      setRelatedErr("Please sign in to contribute.");
-      return;
-    }
-    const res = await supabase.from("test_related_works").insert({
-      test_id: id,
-      created_by: u.user.id,
-      ...payload,
-    });
+    if (!u.user) return setRelatedErr("Please sign in to contribute.");
+
+    const res = await supabase.from("test_related_works").insert({ test_id: id, created_by: u.user.id, ...payload });
     if (res.error) setRelatedErr(res.error.message);
     await loadRelated();
   }
@@ -483,11 +493,20 @@ export default function TestDetail() {
 
   return (
     <div className="space-y-6">
+      {/* HEADER */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">{test.name}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold text-zinc-900">{test.name}</h1>
+            <StatusBadge status={test.status} />
+            {adapted ? (
+              <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800">Adapted</span>
+            ) : null}
+          </div>
+
           <p className="mt-1 text-sm text-zinc-600">
-            {(test.authors ?? "—")}{test.year ? ` (${test.year})` : ""}
+            {(test.authors ?? "—")}
+            {test.year ? ` (${test.year})` : ""}
           </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
@@ -508,6 +527,19 @@ export default function TestDetail() {
                 </a>
               </>
             ) : null}
+
+            {/* Optional hint for logged-out users */}
+            {!userId ? (
+              <>
+                <span className="text-zinc-300">•</span>
+                <span>
+                  <Link className="underline hover:no-underline" to="/login">
+                    Sign in
+                  </Link>{" "}
+                  to view contact email (if shared)
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -516,7 +548,6 @@ export default function TestDetail() {
             Back
           </SmallButton>
 
-          {/* Only owner should see edit link (optional; you may already have /my) */}
           {userId && test.owner_id === userId ? (
             <Link
               className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
@@ -528,6 +559,7 @@ export default function TestDetail() {
         </div>
       </div>
 
+      {/* CORE FIELDS */}
       <Card>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="text-sm text-zinc-700">
@@ -535,19 +567,14 @@ export default function TestDetail() {
           </div>
 
           <div className="text-sm text-zinc-700">
-            <span className="font-medium">Status:</span> {test.status}
+            <span className="font-medium">Status:</span>{" "}
+            {test.status === "draft" ? "Draft" : test.status === "wip" ? "Work in progress" : "Published"}
           </div>
 
           <div className="text-sm text-zinc-700 md:col-span-2">
             <span className="font-medium">Ability:</span>{" "}
             {abilities.length ? (
-              <span className="inline-flex flex-wrap gap-2">
-                {abilities.map((l) => (
-                  <span key={l} className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">
-                    {l}
-                  </span>
-                ))}
-              </span>
+              <span className="inline-flex flex-wrap gap-2">{abilities.map((l) => <Chip key={l}>{l}</Chip>)}</span>
             ) : (
               "—"
             )}
@@ -556,86 +583,69 @@ export default function TestDetail() {
           <div className="text-sm text-zinc-700 md:col-span-2">
             <span className="font-medium">Platform:</span>{" "}
             {platforms.length ? (
-              <span className="inline-flex flex-wrap gap-2">
-                {platforms.map((l) => (
-                  <span key={l} className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">
-                    {l}
-                  </span>
-                ))}
-              </span>
+              <span className="inline-flex flex-wrap gap-2">{platforms.map((l) => <Chip key={l}>{l}</Chip>)}</span>
             ) : (
               "—"
             )}
           </div>
 
-          {/* DOI */}
-{test.doi ? (
-  <div className="text-sm text-zinc-700 md:col-span-2">
-    <span className="font-medium">DOI:</span>{" "}
-    <a
-      className="underline hover:no-underline"
-      href={`https://doi.org/${String(test.doi).trim()}`}
-      target="_blank"
-      rel="noreferrer"
-    >
-      {String(test.doi).trim()}
-    </a>
-  </div>
-) : null}
+          <div className="text-sm text-zinc-700 md:col-span-2">
+            <span className="font-medium">Sensory modality:</span>{" "}
+            {modalities.length ? (
+              <span className="inline-flex flex-wrap gap-2">{modalities.map((l) => <Chip key={l}>{l}</Chip>)}</span>
+            ) : (
+              "—"
+            )}
+          </div>
 
-{/* Source URL */}
-{test.source_url ? (
-  <div className="text-sm text-zinc-700 md:col-span-2">
-    <span className="font-medium">Source URL:</span>{" "}
-    <a className="underline hover:no-underline" href={test.source_url} target="_blank" rel="noreferrer">
-      {test.source_url}
-    </a>
-  </div>
-) : null}
+          <div className="text-sm text-zinc-700 md:col-span-2">
+            <span className="font-medium">Population type:</span>{" "}
+            {populations.length ? (
+              <span className="inline-flex flex-wrap gap-2">{populations.map((l) => <Chip key={l}>{l}</Chip>)}</span>
+            ) : (
+              "—"
+            )}
+          </div>
 
-{/* Original citation */}
-{test.original_citation ? (
-  <div className="text-sm text-zinc-700 md:col-span-2">
-    <span className="font-medium">Original citation:</span>
-    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
-      {test.original_citation}
-    </div>
-  </div>
-) : null}
+          {test.doi ? (
+            <div className="text-sm text-zinc-700 md:col-span-2">
+              <span className="font-medium">DOI:</span>{" "}
+              <a
+                className="underline hover:no-underline"
+                href={`https://doi.org/${String(test.doi).trim()}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {String(test.doi).trim()}
+              </a>
+            </div>
+          ) : (
+            <div className="text-sm text-zinc-700 md:col-span-2">
+              <span className="font-medium">DOI:</span> —
+            </div>
+          )}
 
-{/* Access notes */}
-{test.access_notes ? (
-  <div className="text-sm text-zinc-700 md:col-span-2">
-    <span className="font-medium">Access notes:</span>
-    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
-      {test.access_notes}
-    </div>
-  </div>
-) : null}
+          {test.source_url ? (
+            <div className="text-sm text-zinc-700 md:col-span-2">
+              <span className="font-medium">Source URL:</span>{" "}
+              <a className="underline hover:no-underline" href={test.source_url} target="_blank" rel="noreferrer">
+                {test.source_url}
+              </a>
+            </div>
+          ) : (
+            <div className="text-sm text-zinc-700 md:col-span-2">
+              <span className="font-medium">Source URL:</span> —
+            </div>
+          )}
 
-{/* Example use cases (legacy field, still visible) */}
-{test.use_cases ? (
-  <div className="text-sm text-zinc-700 md:col-span-2">
-    <span className="font-medium">Example use cases:</span>
-    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
-      {test.use_cases}
-    </div>
-  </div>
-) : null}
-
-{/* Notes */}
-{test.notes ? (
-  <div className="text-sm text-zinc-700 md:col-span-2">
-    <span className="font-medium">Notes:</span>
-    <div className="mt-2 whitespace-pre-wrap rounded-xl border bg-zinc-50 p-3 text-sm text-zinc-700">
-      {test.notes}
-    </div>
-  </div>
-) : null}
-
+          <Block label="Original citation" value={test.original_citation ?? ""} />
+          <Block label="Access notes" value={test.access_notes ?? ""} />
+          <Block label="Example use cases" value={test.use_cases ?? ""} />
+          <Block label="Notes" value={test.notes ?? ""} />
         </div>
       </Card>
 
+      {/* COMMUNITY TABLES */}
       <ContributionTable
         title="Other test versions"
         subtitle="Community-contributed versions, adaptations, or alternate implementations."
