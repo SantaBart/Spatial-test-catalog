@@ -19,12 +19,13 @@ function StatusBadge({ status }) {
 
 function overlapsAgeRange(testAgeMin, testAgeMax, filterMin, filterMax) {
   // Hide unknown-age tests only when age filters are used
+  if (testAgeMax == null) testAgeMax=100;
+  if (testAgeMin == null) testAgeMin=0;
   if (filterMin != null) {
-    if (testAgeMax == null) return false;
     if (Number(testAgeMax) < filterMin) return false;
   }
   if (filterMax != null) {
-    if (testAgeMin == null) return false;
+   
     if (Number(testAgeMin) > filterMax) return false;
   }
   return true;
