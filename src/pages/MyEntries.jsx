@@ -17,6 +17,7 @@ async function deleteTest(testId) {
 
   // refresh list
   setTests((prev) => prev.filter((t) => t.id !== testId));
+  navigate("/my");
 }
 
 
