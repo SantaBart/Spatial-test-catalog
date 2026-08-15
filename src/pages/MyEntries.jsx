@@ -58,7 +58,7 @@ export default function MyEntries() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">My entries</h1>
           <p className="mt-1 text-sm text-zinc-600">
-            Drafts are private. Published entries appear in the public catalog.
+            Drafts are private. Published entries appear in the public catalogue.
           </p>
         </div>
           

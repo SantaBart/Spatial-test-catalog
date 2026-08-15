@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
 import Layout from "./components/Layout.jsx";
-import Catalog from "./pages/Catalog";
+import Catalogue from "./pages/Catalogue";
 import Login from "./pages/Login";
 import MyEntries from "./pages/MyEntries";
 import EditTest from "./pages/EditTest";
@@ -36,7 +36,7 @@ export default function App() {
   return (
     <Layout user={user} onSignOut={signOut}>
       <Routes>
-        <Route path="/" element={<Catalog />} />
+        <Route path="/" element={<Catalogue />} />
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/my" element={<MyEntries />} />

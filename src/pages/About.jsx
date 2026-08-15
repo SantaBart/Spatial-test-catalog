@@ -8,15 +8,15 @@ export default function About() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">About the Spatial Test Catalog</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">About the Spatial Test Catalogue</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          A searchable catalog of spatial cognition assessments. Anyone can browse. Verified researchers (ORCID sign-in)
+          A searchable catalogue of spatial cognition assessments. Anyone can browse. Verified researchers (ORCID sign-in)
           can contribute and maintain entries.
         </p>
       </div>
 
       <Card>
-        <h2 className="text-base font-semibold text-zinc-900">How to use the catalog</h2>
+        <h2 className="text-base font-semibold text-zinc-900">How to use the catalogue</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
           <li>Use the search bar to find tests by name or author.</li>
           <li>Filter by ability category and age range to match your target population.</li>
@@ -41,7 +41,7 @@ export default function About() {
             You can also contribute inspired work and other versions of the spatial tests by selecting an entry and adding your input to the tables below.
           </p>
           <p>
-            Each catalog entry has one of three statuses:
+            Each catalogue entry has one of three statuses:
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
               <li><b>Draft</b> – Visible only to the author.</li>
               <li><b>Work in progress</b> – Visible to registered (ORCID-signed-in) users.</li>
@@ -55,9 +55,9 @@ export default function About() {
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-zinc-900">Catalog overview</h2>
+        <h2 className="text-base font-semibold text-zinc-900">Catalogue overview</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
-          <li><b>Cataog</b>: view and search the spatial test catalog</li>
+          <li><b>Cataog</b>: view and search the spatial test catalogue</li>
           <li><b>Contact</b>: conact form </li>
           <li><b>My entries</b>: view and edit your entries</li>
           <li><b>Add</b>: add a new entry</li>

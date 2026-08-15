@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const TO_EMAIL = Deno.env.get("CONTACT_TO_EMAIL") || "santa.bartusevica@lu.lv";
-const FROM_EMAIL = Deno.env.get("CONTACT_FROM_EMAIL") || "Spatial Test Catalog <no-reply@yourdomain>";
+const FROM_EMAIL = Deno.env.get("CONTACT_FROM_EMAIL") || "Spatial Test Catalogue <no-reply@yourdomain>";
 
 serve(async (req) => {
   // CORS
@@ -48,7 +48,7 @@ serve(async (req) => {
 
   // Build email body
   const text = [
-    `New message from Spatial Test Catalog contact form`,
+    `New message from Spatial Test Catalogue contact form`,
     ``,
     `Sender: ${senderEmail || "unknown"}`,
     `Subject: ${safeSubject}`,
@@ -66,7 +66,7 @@ serve(async (req) => {
     body: JSON.stringify({
       from: FROM_EMAIL,
       to: [TO_EMAIL],
-      subject: `[Catalog] ${safeSubject}`,
+      subject: `[Catalogue] ${safeSubject}`,
       text,
       reply_to: senderEmail || undefined,
     }),

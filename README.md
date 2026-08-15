@@ -1,6 +1,6 @@
-# Spatial Test Catalog (MindCave)
+# Spatial Test Catalogue (MindCave)
 
-A public, searchable catalog of spatial cognition assessments.
+A public, searchable catalogue of spatial cognition assessments.
 
 - Anyone can browse without an account
 - Verified contributors sign in via ORCID (OpenID)
@@ -8,7 +8,7 @@ A public, searchable catalog of spatial cognition assessments.
 - Contributor attribution (“Added by…”) via ORCID, with optional email visibility
 
 ## Live site
--  catalog.mindcave.lv 
+-  catalogue.mindcave.lv 
 
 ## Features
 - Search by test name / author

@@ -29,11 +29,11 @@ export default function Layout({ user, onSignOut, children }) {
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white">
                 ST
               </span>
-              <span className="hidden sm:block">Spatial test Catalog</span>
+              <span className="hidden sm:block">Spatial test Catalogue</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-2">
-              <NavItem to="/">Catalog</NavItem>
+              <NavItem to="/">Catalogue</NavItem>
               <NavItem to="/About">About</NavItem>
               <NavItem to="/Contact">Contact</NavItem>
               {user && <NavItem to="/my">My entries</NavItem>}
@@ -72,7 +72,7 @@ export default function Layout({ user, onSignOut, children }) {
           {open && (
             <div className="md:hidden pb-3">
               <div className="flex flex-col gap-2">
-                <NavItem to="/" onClick={() => setOpen(false)}>Catalog</NavItem>
+                <NavItem to="/" onClick={() => setOpen(false)}>Catalogue</NavItem>
                 {user && <NavItem to="/my" onClick={() => setOpen(false)}>My entries</NavItem>}
                 {user && <NavItem to="/edit" onClick={() => setOpen(false)}>Add</NavItem>}
               </div>
@@ -87,7 +87,7 @@ export default function Layout({ user, onSignOut, children }) {
 
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-sm text-zinc-500">
-          © {new Date().getFullYear()}  • Spatial Test Catalog
+          © {new Date().getFullYear()}  • Spatial Test Catalogue
         </div>
       </footer>
     </div>

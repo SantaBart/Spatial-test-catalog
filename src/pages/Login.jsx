@@ -27,7 +27,7 @@ export default function Login() {
     <div className="mx-auto max-w-md">
       <h1 className="text-2xl font-semibold text-zinc-900">Sign in</h1>
       <p className="mt-2 text-sm text-zinc-600">
-        Sign in with your verified ORCID iD to contribute to the catalog.
+        Sign in with your verified ORCID iD to contribute to the catalogue.
       </p>
 
       <div className="mt-6 rounded-2xl border bg-white p-5 shadow-sm space-y-4">

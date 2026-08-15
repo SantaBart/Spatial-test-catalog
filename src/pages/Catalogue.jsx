@@ -31,7 +31,7 @@ function overlapsAgeRange(testAgeMin, testAgeMax, filterMin, filterMax) {
   return true;
 }
 
-export default function Catalog() {
+export default function Catalogue() {
   const [tests, setTests] = useState([]);
 
   // vocabularies
@@ -273,7 +273,7 @@ export default function Catalog() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Spatial Tests Catalog</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">Spatial Tests Catalogue</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Search spatial ability tests by name/author and filter by tags, age range, and status.
         </p>

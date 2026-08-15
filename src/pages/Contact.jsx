@@ -11,7 +11,7 @@ export default function Contact() {
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState("");
 
-  const [subject, setSubject] = useState("Spatial Test Catalog");
+  const [subject, setSubject] = useState("Spatial Test Catalogue");
   const [message, setMessage] = useState(
     "My message:"
   );
@@ -32,7 +32,7 @@ export default function Contact() {
     const to = "santa.bartusevica@lu.lv";
     const s = encodeURIComponent(subject || "");
     const body = encodeURIComponent(
-      `${message || ""}\n\n---\nFrom: ${userEmail || "unknown"}\nSent via catalog.mindcave.lv`
+      `${message || ""}\n\n---\nFrom: ${userEmail || "unknown"}\nSent via catalogue.mindcave.lv`
     );
     return `mailto:${to}?subject=${s}&body=${body}`;
   }, [subject, message, userEmail]);
