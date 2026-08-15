@@ -273,7 +273,7 @@ export default function Catalogue() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Spatial Tests Catalogue</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">Spatial Test Catalogue</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Search spatial ability tests by name/author and filter by tags, age range, and status.
         </p>
