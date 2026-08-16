@@ -275,7 +275,7 @@ export default function Catalogue() {
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">Spatial Test Catalogue</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Search spatial ability tests by name/author and filter by tags, age range, and status.
+          Search spatial ability tests by name or author and filter by age range, status, ability, platform, modality, and population.
         </p>
       </div>
 
@@ -372,7 +372,7 @@ export default function Catalogue() {
           <div className="md:col-span-6">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:items-end">
               <div>
-                <label className="text-sm font-medium text-zinc-700">Age min (filter)</label>
+                <label className="text-sm font-medium text-zinc-700">Age min</label>
                 <input
                   inputMode="numeric"
                   className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"
@@ -383,7 +383,7 @@ export default function Catalogue() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-zinc-700">Age max (filter)</label>
+                <label className="text-sm font-medium text-zinc-700">Age max </label>
                 <input
                   inputMode="numeric"
                   className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900/10"

@@ -29,7 +29,7 @@ export default function Layout({ user, onSignOut, children }) {
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white">
                 ST
               </span>
-              <span className="hidden sm:block">Spatial test Catalogue</span>
+              <span className="hidden sm:block">Spatial est Catalogue</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-2">
