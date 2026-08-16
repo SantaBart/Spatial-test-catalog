@@ -1,4 +1,4 @@
-# Spatial Test Catalogue (MindCave)
+# Spatial Test Catalogue
 
 A public, searchable catalogue of spatial cognition assessments.
 
