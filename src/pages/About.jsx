@@ -10,8 +10,7 @@ export default function About() {
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">About the Spatial Test Catalogue</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          A searchable catalogue of spatial cognition assessments. Anyone can browse. Verified researchers (ORCID sign-in)
-          can contribute and maintain entries.
+          The Spatial Test Catalogue is a searchable, collaborative resource for discovering and comparing spatial cognition assessments. It aims to help researchers identify suitable assessment methods and access information about their characteristics, applications, and availability. Anyone can browse the catalogue, while verified researchers can sign in with ORCID to contribute and maintain entries.
         </p>
       </div>
 
@@ -22,7 +21,7 @@ export default function About() {
           <li>Filter by ability category and age range to match your target population.</li>
           <li>Open the source link for the official publication or landing page.</li>
           <li>Check access notes for licensing, author contact, or availability.</li>
-          <li>Use “Added by” attribution to contact the contributor (ORCID link; email only if they opted in).</li>
+          <li>Use the ‘Added by’ information to identify or contact the contributor (via ORCID or email, if provided).</li>
         </ul>
       </Card>
 
@@ -38,7 +37,7 @@ export default function About() {
             access materials (e.g., contact authors, OSF link, commercial source).
           </p>
             <p>
-            You can also contribute inspired work and other versions of the spatial tests by selecting an entry and adding your input to the tables below.
+            You can also contribute adaptations, related work, and other versions of existing spatial tests by opening an entry and adding the relevant information.
           </p>
           <p>
             Each catalogue entry has one of three statuses:
@@ -57,16 +56,16 @@ export default function About() {
       <Card>
         <h2 className="text-base font-semibold text-zinc-900">Catalogue overview</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700">
-          <li><b>Cataog</b>: view and search the spatial test catalogue</li>
+          <li><b>Cataogue</b>: view and search the spatial test catalogue</li>
           <li><b>Contact</b>: conact form </li>
           <li><b>My entries</b>: view and edit your entries</li>
           <li><b>Add</b>: add a new entry</li>
-          <li><b>profile</b>: view and edit your profile</li>
+          <li><b>Profile</b>: view and edit your profile</li>
         </ul>
       </Card>
 
        <Card>
-        <h1 className="text-base font-semibold text-zinc-900">In case of any questions or conflicts about your contributions or the contributions of others, please reach out to us using the contact form.</h1>
+        <h1 className="text-base font-semibold text-zinc-900">If you have any questions or concerns about catalogue entries or contributions, please contact us using the contact form.</h1>
       </Card>
     </div>
   );
