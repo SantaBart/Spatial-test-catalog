@@ -26,12 +26,17 @@ export default function Layout({ user, onSignOut, children }) {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between gap-3">
             <Link to="/" className="flex items-center gap-2 font-semibold text-zinc-900">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white">
-                ST
-              </span>
-              <span className="hidden sm:block">Spatial est Catalogue</span>
+              {/* <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white">
+                ST    
+              </span> */}
+              <img
+                 src="/Logo.png"
+                 alt="Spatial Test Catalogue logo"
+                 className="h-12 w-12 object-contain"
+              />
+              <span className="hidden sm:block">Spatial Test Catalogue</span>
             </Link>
-
+            <link rel="icon" type="image/svg+xml" href="/Logo-white.png" />
             <nav className="hidden md:flex items-center gap-2">
               <NavItem to="/">Catalogue</NavItem>
               <NavItem to="/About">About</NavItem>
